@@ -1,62 +1,92 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# Spoten Back-end Challenge
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A small Laravel 8 JSON API for a movie catalog with user comments (ratings).
 
-## About Laravel
+## Context
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Solution to the back-end hiring challenge ("Desafio Back-end") of Spoten (2021).
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## What it does
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- `movie` table: name, year, synopsis (`sinopse`), duration, directors, writers, cast (`stars`, JSON), score (`rating`, decimal) and poster image URL.
+- `rating` table: a free-text `comment` linked to a movie (`movie_id`, foreign key with cascade on update/delete).
+- A seeder loads the eight Harry Potter films (Portuguese titles and synopses).
+- Endpoints, registered as resource routes in `routes/web.php` (CSRF verification is disabled for all routes):
 
-## Learning Laravel
+| Method | Path | Behavior |
+| --- | --- | --- |
+| GET | `/movies` | All movies, each with its ratings |
+| GET | `/movies/{id}` | The movie with that id and its ratings (returned as a one-element array) |
+| GET | `/ratings` | All ratings, each with its movie |
+| GET | `/ratings/{id}` | The rating with that id and its movie (one-element array) |
+| POST | `/ratings` | Creates a rating from `comment` and `movie_id`; returns `{ "success": bool, "message": string }` |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+The remaining resource actions (create/store for movies, edit, update, destroy) exist as empty stubs.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Tech stack
 
-## Laravel Sponsors
+- PHP `^7.3|^8.0`
+- Laravel Framework 8 (`^8.12`, locked at v8.22.1)
+- MySQL (Eloquent models use a dedicated `spoten` connection)
+- PHPUnit 9 (locked at 9.5.0)
+- Laravel Sail 1.x (`docker-compose.yml`: PHP 8.0 runtime, MySQL 8.0, Redis, MailHog)
+- Laravel Mix 6 for front-end assets (not used by the API)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+## Running locally
 
-### Premium Partners
+Without Docker (PHP, Composer and MySQL installed):
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/)**
-- **[OP.GG](https://op.gg)**
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+# set DB_HOST, DB_DATABASE, DB_USERNAME and DB_PASSWORD in .env
+php artisan migrate --seed
+php artisan serve
+```
 
-## Contributing
+Then open `http://localhost:8000/movies`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+With Laravel Sail (the compose file builds from `vendor/`, so run `composer install` first):
 
-## Code of Conduct
+```bash
+composer install
+cp .env.example .env    # set DB_HOST=mysql and a DB_PASSWORD
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate --seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Example request:
 
-## Security Vulnerabilities
+```bash
+curl -X POST http://localhost:8000/ratings -d comment="Great movie" -d movie_id=1
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tests
 
-## License
+```bash
+php artisan test
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Only the default Laravel example tests are present (`tests/Feature/ExampleTest.php` checks that `/` returns 200).
+
+## Project structure
+
+```
+app/Http/Controllers/   MovieController, RatingController
+app/Models/             Movie, Rating (and the default User)
+database/migrations/    movie and rating tables
+database/seeders/       MovieSeeder (Harry Potter films)
+routes/web.php          resource routes for movies and ratings
+config/database.php     extra "spoten" MySQL connection
+```
+
+## Notes
+
+- No dedicated tests for the movie/rating endpoints.
+- The endpoints live in `routes/web.php` rather than `routes/api.php`, with CSRF disabled for every route (`VerifyCsrfToken::$except = ['*']`).
+- `POST /ratings` only checks that `comment` and `movie_id` are present; it does not validate that the movie exists, and an unknown `movie_id` surfaces as a database foreign-key error.
+- `show` endpoints return an array instead of a single object and do not return 404 for unknown ids.
+- There is no authentication.
+- The `spoten` connection falls back to `root`/`root` when the database variables are not set.
